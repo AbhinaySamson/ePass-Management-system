@@ -4,14 +4,23 @@ const mongoose = require('mongoose')
 const UserModel = require('./User')
 const EpassModel = require('./Epass');
 const AuthUser = require('./AuthUser');
+require("dotenv").config(); 
+
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-mongoose.connect('mongodb://127.0.0.1:27017/Company')
-.then(() => console.log('DB connected'))
-.catch(err => console.log(err))
+//mongoose.connect('mongodb://127.0.0.1:27017/Company')
+//.then(() => console.log('DB connected'))
+//.catch(err => console.log(err))
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log(" Connected to MongoDB Atlas"))
+.catch((err) => console.error("MongoDB connection error:", err));
 
 //Register API Route
 app.post('/register',(req,res)=>{
@@ -47,7 +56,7 @@ app.post('/epass', (req, res) => {
   });
   
 // Signup Route
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 app.post("/signup", async (req, res) => {
   try {
@@ -68,7 +77,8 @@ app.post("/signup", async (req, res) => {
     res.status(500).json(err);
   }
 });
-
+const jwt = require("jsonwebtoken");
+const SECRET_KEY = "yourSecretKey";
 
 // Login Route
 app.post('/login', async (req, res) => {
@@ -81,7 +91,12 @@ app.post('/login', async (req, res) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json("Invalid credentials");
 
-    res.json({ message: "Login successful", email: user.email });
+    // Generate JWT Token
+    const token = jwt.sign({ email: user.email }, SECRET_KEY, { expiresIn: '1h' });
+
+    // Send token back to frontend
+    res.json({ message: "Login successful", token, email: user.email });
+
   } catch (err) {
     res.status(500).json(err);
   }
